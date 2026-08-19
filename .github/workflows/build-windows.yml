@@ -1,0 +1,66 @@
+name: Build Windows Portable
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.12.0"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --include=dev
+
+      - name: Validate source
+        run: |
+          npm run check
+          npm test
+
+      - name: Prepare automatic login credentials
+        shell: pwsh
+        env:
+          PANEL_AUTO_LOGIN_EMAIL: ${{ secrets.PANEL_AUTO_LOGIN_EMAIL }}
+          PANEL_AUTO_LOGIN_PASSWORD: ${{ secrets.PANEL_AUTO_LOGIN_PASSWORD }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:PANEL_AUTO_LOGIN_EMAIL)) {
+            throw "Configure o secret PANEL_AUTO_LOGIN_EMAIL no repositório."
+          }
+          if ([string]::IsNullOrWhiteSpace($env:PANEL_AUTO_LOGIN_PASSWORD)) {
+            throw "Configure o secret PANEL_AUTO_LOGIN_PASSWORD no repositório."
+          }
+          $payload = @{
+            email = $env:PANEL_AUTO_LOGIN_EMAIL
+            password = $env:PANEL_AUTO_LOGIN_PASSWORD
+          } | ConvertTo-Json -Compress
+          [System.IO.File]::WriteAllText(
+            (Join-Path $PWD ".auto-login.json"),
+            $payload,
+            [System.Text.UTF8Encoding]::new($false)
+          )
+
+      - name: Build portable app
+        run: npm run dist:win
+
+      - name: Remove temporary credentials file
+        if: always()
+        shell: pwsh
+        run: Remove-Item -Force .auto-login.json -ErrorAction SilentlyContinue
+
+      - name: Upload portable executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: AmigosUnidos-Windows
+          path: dist/*.exe
+          if-no-files-found: error
+          retention-days: 30

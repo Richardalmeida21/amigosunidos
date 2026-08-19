@@ -12,13 +12,44 @@
     "start": "node scripts/start.mjs",
     "test": "node --test",
     "test:browser": "node --test test/browser.integration.mjs",
-    "check": "node --check scripts/start.mjs && node --check src/main.mjs && node --check src/config.mjs && node --check src/supabase.mjs && node --check src/hwid.mjs && node --check src/hodpro-service.mjs && node --check src/hodpro-api.mjs && node --check src/auth-store.mjs && node --check src/browser-manager.mjs && node --check src/preload.cjs && node --check public/renderer.js"
+    "check": "node --check scripts/start.mjs && node --check src/main.mjs && node --check src/config.mjs && node --check src/supabase.mjs && node --check src/hwid.mjs && node --check src/hodpro-service.mjs && node --check src/hodpro-api.mjs && node --check src/auth-store.mjs && node --check src/browser-manager.mjs && node --check src/preload.cjs && node --check public/renderer.js",
+    "dist:win": "electron-builder --win portable --x64"
   },
   "dependencies": {
     "dotenv": "17.4.2",
     "playwright-core": "1.62.1"
   },
   "devDependencies": {
-    "electron": "43.4.1"
+    "electron": "43.4.1",
+    "electron-builder": "26.15.7"
+  },
+  "build": {
+    "appId": "br.com.amigosunidos.painel",
+    "productName": "Amigos Unidos",
+    "asar": true,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "public/**/*",
+      "scripts/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": ".auto-login.json",
+        "to": "auto-login.json"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "artifactName": "AmigosUnidos-${version}-portable.${ext}"
+    }
   }
 }

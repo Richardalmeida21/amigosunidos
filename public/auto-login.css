@@ -1,0 +1,12 @@
+/* O modo distribuído usa autenticação automática no processo principal. */
+#auth-view {
+  display: none !important;
+}
+
+#app-view[hidden] {
+  display: block !important;
+}
+
+#logout {
+  display: none !important;
+}

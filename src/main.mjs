@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import electron from "electron";
@@ -18,6 +19,8 @@ let mainWindow = null;
 let browserManager = null;
 let service = null;
 let shutdownStarted = false;
+let automaticCredentials = null;
+let automaticLoginPromise = null;
 
 function assertTrustedSender(event) {
   const expectedUrl = pathToFileURL(UI_PATH).href;
@@ -45,6 +48,101 @@ function publicError(error) {
   };
 }
 
+function validateAutomaticCredentials(value) {
+  const email = typeof value?.email === "string" ? value.email.trim() : "";
+  const password = typeof value?.password === "string" ? value.password : "";
+  if (!email || !email.includes("@") || !password) return null;
+  return Object.freeze({ email, password });
+}
+
+function loadAutomaticCredentials() {
+  if (automaticCredentials) return automaticCredentials;
+
+  const fromEnvironment = validateAutomaticCredentials({
+    email: process.env.PANEL_AUTO_LOGIN_EMAIL,
+    password: process.env.PANEL_AUTO_LOGIN_PASSWORD
+  });
+  if (fromEnvironment) {
+    automaticCredentials = fromEnvironment;
+    return automaticCredentials;
+  }
+
+  const candidates = [
+    path.join(process.resourcesPath || "", "auto-login.json"),
+    path.resolve(MODULE_DIR, "../.auto-login.json"),
+    path.join(path.dirname(process.execPath), ".auto-login.json")
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    try {
+      if (!fs.existsSync(candidate)) continue;
+      const parsed = JSON.parse(fs.readFileSync(candidate, "utf8"));
+      const credentials = validateAutomaticCredentials(parsed);
+      if (credentials) {
+        automaticCredentials = credentials;
+        return automaticCredentials;
+      }
+    } catch {
+      // Nunca registra o conteúdo do arquivo de credenciais.
+    }
+  }
+
+  throw new SafeAppError(
+    "O login automático ainda não foi configurado nesta cópia do aplicativo.",
+    "AUTO_LOGIN_NOT_CONFIGURED"
+  );
+}
+
+function isAuthenticationFailure(error) {
+  const code = String(error?.code || "").toUpperCase();
+  return [
+    "AUTH_REQUIRED",
+    "AUTH_EXPIRED",
+    "UNAUTHENTICATED",
+    "NOT_AUTHENTICATED",
+    "SESSION_EXPIRED",
+    "GATEWAY_HTTP_401",
+    "GATEWAY_HTTP_403"
+  ].includes(code) || [401, 403].includes(error?.status);
+}
+
+async function automaticLogin() {
+  if (automaticLoginPromise) return automaticLoginPromise;
+  automaticLoginPromise = (async () => {
+    const credentials = loadAutomaticCredentials();
+    const previousStatus = service.getAuthStatus();
+    try {
+      return await service.login(credentials.email, credentials.password);
+    } catch (error) {
+      // Se a autenticação nova falhou por rede e havia uma sessão válida salva,
+      // restaura o token anterior para o painel não ficar indisponível à toa.
+      if (previousStatus?.authenticated && !isAuthenticationFailure(error)) {
+        try {
+          await service.initialize();
+          const restored = service.getAuthStatus();
+          if (restored?.authenticated) return restored;
+        } catch {
+          // Propaga o erro original abaixo.
+        }
+      }
+      throw error;
+    }
+  })().finally(() => {
+    automaticLoginPromise = null;
+  });
+  return automaticLoginPromise;
+}
+
+async function withAutomaticRelogin(operation) {
+  try {
+    return await operation();
+  } catch (error) {
+    if (!isAuthenticationFailure(error)) throw error;
+    await automaticLogin();
+    return operation();
+  }
+}
+
 function handle(channel, operation) {
   ipcMain.handle(channel, async (event, ...args) => {
     try {
@@ -58,15 +156,16 @@ function handle(channel, operation) {
 
 function registerHandlers() {
   handle("auth:status", () => service.getAuthStatus());
+  handle("auth:reauthenticate", () => automaticLogin());
   handle("auth:login", (input) => service.login(input?.email, input?.password));
   handle("auth:logout", () => service.logout());
-  handle("tools:list", () => service.listTools());
-  handle("tools:open", (toolId) => service.openTool(toolId));
-  handle("tools:restart", (toolId) => service.restartTool(toolId));
+  handle("tools:list", () => withAutomaticRelogin(() => service.listTools()));
+  handle("tools:open", (toolId) => withAutomaticRelogin(() => service.openTool(toolId)));
+  handle("tools:restart", (toolId) => withAutomaticRelogin(() => service.restartTool(toolId)));
   handle("tools:report", (input) =>
-    service.reportTool(input?.toolId, input?.confirmationWord)
+    withAutomaticRelogin(() => service.reportTool(input?.toolId, input?.confirmationWord))
   );
-  handle("tools:poll", () => service.pollTools());
+  handle("tools:poll", () => withAutomaticRelogin(() => service.pollTools()));
 }
 
 function createWindow() {
@@ -127,7 +226,9 @@ async function boot() {
       deviceId,
       appVersion: app.getVersion()
     });
+
     await service.initialize();
+    await automaticLogin();
     registerHandlers();
     mainWindow = createWindow();
 
