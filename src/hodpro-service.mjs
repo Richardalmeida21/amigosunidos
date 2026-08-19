@@ -236,15 +236,35 @@ function visibleToolIds(payload) {
     .map(String);
 }
 
-function accessState(payload, now) {
-  const profile = payload?.profile && typeof payload.profile === "object"
-    ? payload.profile
-    : {};
+function compareVersions(left, right) {
+  const parse = (value) => String(value ?? "").split(".").slice(0, 3).map((part) => {
+    const match = part.match(/^\d+/);
+    return match ? Number(match[0]) : 0;
+  });
+  const a = parse(left);
+  const b = parse(right);
+  for (let index = 0; index < 3; index += 1) {
+    if ((a[index] || 0) !== (b[index] || 0)) return (a[index] || 0) - (b[index] || 0);
+  }
+  return 0;
+}
+
+function accessState(payload, now, appVersion = "0.0.0") {
+  const hasProfile = payload?.profile && typeof payload.profile === "object" &&
+    !Array.isArray(payload.profile);
+  const profile = hasProfile ? payload.profile : {};
   const config = payload?.config && typeof payload.config === "object"
     ? payload.config
     : {};
+  if (!hasProfile) {
+    return { blocked: true, code: "PROFILE_UNAVAILABLE" };
+  }
   if (config.maintenance_mode === true) {
     return { blocked: true, code: "SERVICE_MAINTENANCE" };
+  }
+  const minimumVersion = config.min_required_version ?? config.minRequiredVersion;
+  if (minimumVersion && compareVersions(appVersion, minimumVersion) < 0) {
+    return { blocked: true, code: "CLIENT_UPDATE_REQUIRED" };
   }
   if (profile.is_blocked === true) {
     return { blocked: true, code: "PROFILE_BLOCKED" };
@@ -267,12 +287,13 @@ function verificationDenied(payload) {
 }
 
 export class HodProService {
-  constructor({ api, auth, browserManager, deviceId, now = () => Date.now() }) {
+  constructor({ api, auth, browserManager, deviceId, appVersion = "0.0.0", now = () => Date.now() }) {
     this.api = api;
     this.auth = auth;
     this.browserManager = browserManager;
     this.deviceId = deviceId;
     this.now = now;
+    this.appVersion = appVersion;
     this.tools = new Map();
     this.openAccounts = new Map();
     this.replaceOnNextOpen = new Set();
@@ -399,7 +420,10 @@ export class HodProService {
     }
     const visible = new Set(visibleToolIds(pollPayload));
     const maintenance = new Set(maintenanceIds(pollPayload));
-    this.currentAccessState = accessState(pollPayload, this.now());
+    this.currentAccessState = accessState(pollPayload, this.now(), this.appVersion);
+    if (this.currentAccessState.blocked) {
+      await this.revokeCurrentAccess(this.currentAccessState.code);
+    }
     const normalized = toolArray(toolsPayload)
       .map(normalizeTool)
       .filter((tool) => visible.has(tool.id));
@@ -605,7 +629,10 @@ export class HodProService {
     }
     const ids = maintenanceIds(payload);
     const visible = new Set(visibleToolIds(payload));
-    this.currentAccessState = accessState(payload, this.now());
+    this.currentAccessState = accessState(payload, this.now(), this.appVersion);
+    if (this.currentAccessState.blocked) {
+      await this.revokeCurrentAccess(this.currentAccessState.code);
+    }
     for (const [id, tool] of this.tools) {
       tool.inMaintenance = ids.includes(id);
       tool.canOpen = Boolean(
@@ -629,6 +656,7 @@ export const __testing = {
   maintenanceIds,
   visibleToolIds,
   accessState,
+  compareVersions,
   normalizeTool,
   verificationDenied
 };
