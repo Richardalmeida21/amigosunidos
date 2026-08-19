@@ -1,23 +1,22 @@
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import electron from "electron";
+import { AuthSessionManager, AuthStore, AuthStoreError } from "./auth-store.mjs";
 import { BrowserManager } from "./browser-manager.mjs";
 import { loadConfig } from "./config.mjs";
-import {
-  isAccountLaunchable,
-  SafeAppError,
-  SupabaseRepository
-} from "./supabase.mjs";
+import { HodProApi, HodProApiError } from "./hodpro-api.mjs";
+import { HodProService } from "./hodpro-service.mjs";
+import { getDeviceId } from "./hwid.mjs";
+import { SafeAppError } from "./supabase.mjs";
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const UI_PATH = path.resolve(MODULE_DIR, "../public/index.html");
 const PRELOAD_PATH = path.resolve(MODULE_DIR, "preload.cjs");
-const { app, BrowserWindow, dialog, ipcMain } = electron;
+const { app, BrowserWindow, dialog, ipcMain, safeStorage } = electron;
 
 let mainWindow = null;
 let browserManager = null;
-let repository = null;
-let config = null;
+let service = null;
 let shutdownStarted = false;
 
 function assertTrustedSender(event) {
@@ -33,7 +32,11 @@ function assertTrustedSender(event) {
 }
 
 function publicError(error) {
-  if (error instanceof SafeAppError) {
+  if (
+    error instanceof SafeAppError ||
+    error instanceof HodProApiError ||
+    error instanceof AuthStoreError
+  ) {
     return { message: error.message, code: error.code };
   }
   return {
@@ -53,46 +56,17 @@ function handle(channel, operation) {
   });
 }
 
-async function loadLaunchableAccount(accountId) {
-  const account = await repository.getAccountSession(accountId);
-  if (!account.isActive) {
-    throw new SafeAppError("Essa conta está marcada como inativa.", "ACCOUNT_INACTIVE");
-  }
-  if (!isAccountLaunchable(account)) {
-    throw new SafeAppError(
-      "Essa conta não possui uma URL de acesso segura.",
-      "MISSING_LAUNCH_URL"
-    );
-  }
-  return account;
-}
-
 function registerHandlers() {
-  handle("accounts:list", async () => {
-    const accounts = await repository.listAccounts();
-    return {
-      accounts,
-      connection: {
-        authenticated: Boolean(config.accessToken),
-        source: config.configSource
-      }
-    };
-  });
-
-  handle("accounts:open", async (accountId) => {
-    const account = await loadLaunchableAccount(accountId);
-    const result = await browserManager.openAccount(account);
-    return {
-      ...result,
-      sessionUpdatedAt: result.reused ? null : account.updatedAt
-    };
-  });
-
-  handle("accounts:restart", async (accountId) => {
-    return browserManager.restartAccount(accountId, () =>
-      loadLaunchableAccount(accountId)
-    );
-  });
+  handle("auth:status", () => service.getAuthStatus());
+  handle("auth:login", (input) => service.login(input?.email, input?.password));
+  handle("auth:logout", () => service.logout());
+  handle("tools:list", () => service.listTools());
+  handle("tools:open", (toolId) => service.openTool(toolId));
+  handle("tools:restart", (toolId) => service.restartTool(toolId));
+  handle("tools:report", (input) =>
+    service.reportTool(input?.toolId, input?.confirmationWord)
+  );
+  handle("tools:poll", () => service.pollTools());
 }
 
 function createWindow() {
@@ -105,7 +79,7 @@ function createWindow() {
     show: false,
     autoHideMenuBar: true,
     backgroundColor: "#07111f",
-    title: "Painel de Contas",
+    title: "Painel de Ferramentas",
     webPreferences: {
       preload: PRELOAD_PATH,
       contextIsolation: true,
@@ -117,8 +91,7 @@ function createWindow() {
 
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   window.webContents.on("will-navigate", (event, targetUrl) => {
-    const expectedUrl = pathToFileURL(UI_PATH).href;
-    if (targetUrl !== expectedUrl) event.preventDefault();
+    if (targetUrl !== pathToFileURL(UI_PATH).href) event.preventDefault();
   });
   if (!isTestMode) window.once("ready-to-show", () => window.show());
   window.on("closed", () => {
@@ -130,11 +103,28 @@ function createWindow() {
 
 async function boot() {
   try {
-    config = loadConfig();
-    repository = new SupabaseRepository(config);
-    browserManager = new BrowserManager({ channel: config.browserChannel });
+    const config = loadConfig();
+    if (config.dataMode !== "hodpro") {
+      throw new Error("Este painel usa o fluxo autenticado hodpro. Ajuste PANEL_DATA_MODE=hodpro.");
+    }
+
+    const api = new HodProApi({
+      baseUrl: config.gatewayUrl,
+      timeoutMs: config.requestTimeoutMs
+    });
+    const authStore = new AuthStore({ app, safeStorage });
+    const auth = new AuthSessionManager({ apiClient: api, store: authStore });
+    const deviceId = await getDeviceId();
+
+    browserManager = new BrowserManager({
+      channel: config.browserChannel,
+      profilesRoot: path.join(app.getPath("userData"), "tool-profiles")
+    });
+    service = new HodProService({ api, auth, browserManager, deviceId });
+    await service.initialize();
     registerHandlers();
     mainWindow = createWindow();
+
     if (process.env.PANEL_TEST_MODE === "1") {
       const autoExitMs = Number.parseInt(process.env.PANEL_AUTO_EXIT_MS || "", 10);
       if (Number.isFinite(autoExitMs) && autoExitMs >= 250 && autoExitMs <= 30_000) {
@@ -142,11 +132,10 @@ async function boot() {
       }
     }
   } catch (error) {
-    const safeConfigMessage =
-      error instanceof Error && typeof error.message === "string"
-        ? error.message
-        : "Não foi possível iniciar o aplicativo.";
-    dialog.showErrorBox("Painel de Contas", safeConfigMessage);
+    const message = error instanceof Error && typeof error.message === "string"
+      ? error.message
+      : "Não foi possível iniciar o aplicativo.";
+    dialog.showErrorBox("Painel de Ferramentas", message);
     app.quit();
   }
 }
@@ -161,24 +150,18 @@ if (!lockAcquired) {
     mainWindow.show();
     mainWindow.focus();
   });
-
   app.whenReady().then(boot);
 }
 
 app.on("activate", () => {
-  if (!mainWindow && repository) mainWindow = createWindow();
+  if (!mainWindow && service) mainWindow = createWindow();
 });
 
-app.on("window-all-closed", () => {
-  app.quit();
-});
+app.on("window-all-closed", () => app.quit());
 
 app.on("before-quit", (event) => {
   if (shutdownStarted || !browserManager) return;
   shutdownStarted = true;
   event.preventDefault();
-  browserManager
-    .close()
-    .catch(() => undefined)
-    .finally(() => app.quit());
+  browserManager.close().catch(() => undefined).finally(() => app.quit());
 });

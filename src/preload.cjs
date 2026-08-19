@@ -15,8 +15,21 @@ async function invoke(channel, ...args) {
 contextBridge.exposeInMainWorld(
   "accountPanel",
   Object.freeze({
-    listAccounts: () => invoke("accounts:list"),
-    openAccount: (accountId) => invoke("accounts:open", accountId),
-    restartAccount: (accountId) => invoke("accounts:restart", accountId)
+    getAuthStatus: () => invoke("auth:status"),
+    login: ({ email, password }) =>
+      invoke("auth:login", {
+        email: String(email || "").trim(),
+        password: String(password || "")
+      }),
+    logout: () => invoke("auth:logout"),
+    listTools: () => invoke("tools:list"),
+    openTool: (toolId) => invoke("tools:open", String(toolId || "")),
+    restartTool: (toolId) => invoke("tools:restart", String(toolId || "")),
+    reportTool: ({ toolId, confirmationWord }) =>
+      invoke("tools:report", {
+        toolId: String(toolId || ""),
+        confirmationWord: String(confirmationWord || "")
+      }),
+    pollTools: () => invoke("tools:poll")
   })
 );

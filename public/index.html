@@ -7,51 +7,91 @@
       content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Painel de Contas</title>
+    <title>Painel de Ferramentas</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <div class="ambient ambient-one"></div>
     <div class="ambient ambient-two"></div>
 
-    <main class="shell">
+    <main id="auth-view" class="auth-shell" aria-labelledby="login-title">
+      <section class="login-card">
+        <div class="login-brand" aria-hidden="true">
+          <div class="brand-mark"><span></span><span></span></div>
+        </div>
+        <p class="eyebrow">ACESSO PROTEGIDO</p>
+        <h1 id="login-title">Entre no seu painel</h1>
+        <p class="login-description">
+          Use sua conta HodPro para carregar as ferramentas e solicitar uma sessão válida.
+        </p>
+
+        <form id="login-form" class="login-form" novalidate>
+          <label for="login-email">E-mail</label>
+          <input
+            id="login-email"
+            name="email"
+            type="email"
+            inputmode="email"
+            autocomplete="username"
+            autocapitalize="none"
+            spellcheck="false"
+            required
+          />
+
+          <label for="login-password">Senha</label>
+          <input
+            id="login-password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            required
+          />
+
+          <p id="login-error" class="form-error" role="alert" hidden></p>
+          <button id="login-submit" class="primary-button" type="submit">Entrar</button>
+        </form>
+
+        <p class="privacy-note">A senha é enviada diretamente ao processo principal e não é salva nesta tela.</p>
+      </section>
+    </main>
+
+    <main id="app-view" class="shell" hidden>
       <header class="topbar">
         <div class="brand-mark" aria-hidden="true">
           <span></span>
           <span></span>
         </div>
         <div class="brand-copy">
-          <p class="eyebrow">ACESSO LOCAL</p>
-          <h1>Painel de Contas</h1>
+          <p class="eyebrow">ACESSO AUTENTICADO</p>
+          <h1>Painel de Ferramentas</h1>
         </div>
-        <div class="privacy-pill">
-          <span class="privacy-dot"></span>
-          Cookies fora da interface
+        <div class="user-area">
+          <span id="user-email" class="user-email"></span>
+          <button id="logout" class="secondary-button compact" type="button">Sair</button>
         </div>
       </header>
 
       <section class="hero">
         <div>
           <p class="hero-kicker">SUAS FERRAMENTAS, UM CLIQUE</p>
-          <h2>Entre na conta certa<br /><span>sem repetir o login.</span></h2>
+          <h2>Entre na ferramenta certa<br /><span>com uma sessão válida.</span></h2>
           <p class="hero-description">
-            Cada acesso abre uma janela isolada do Chrome. As sessões ficam somente
-            no processo local e são descartadas ao fechar o painel.
+            O painel solicita uma conta ao serviço, restaura a sessão em um perfil isolado
+            e acompanha automaticamente as ferramentas em manutenção.
           </p>
         </div>
-        <div class="hero-stat" aria-label="Resumo das contas">
-          <span id="account-count">—</span>
-          <small>contas encontradas</small>
+        <div class="hero-stat" aria-label="Resumo das ferramentas">
+          <span id="tool-count">—</span>
+          <small>ferramentas encontradas</small>
         </div>
       </section>
 
-      <aside id="security-banner" class="security-banner" hidden>
+      <aside id="maintenance-banner" class="security-banner" hidden>
         <div class="shield" aria-hidden="true">!</div>
         <div>
-          <strong>Consulta anônima detectada</strong>
-          <p>
-            Adequado apenas para dados fictícios. Antes de usar sessões reais,
-            proteja a tabela com Supabase Auth e RLS.
+          <strong>Login automático em andamento</strong>
+          <p id="maintenance-summary">
+            Uma ou mais ferramentas estão em manutenção. O painel verificará novamente a cada 10 segundos.
           </p>
         </div>
       </aside>
@@ -65,7 +105,7 @@
             id="search"
             type="search"
             autocomplete="off"
-            placeholder="Buscar conta ou ferramenta..."
+            placeholder="Buscar ferramenta, categoria ou domínio..."
           />
         </label>
         <button id="refresh" class="secondary-button" type="button">
@@ -76,30 +116,81 @@
         </button>
       </section>
 
-      <section>
+      <section aria-labelledby="tools-heading">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">CONTAS DISPONÍVEIS</p>
-            <h3>Acessos salvos</h3>
+            <p class="eyebrow">FERRAMENTAS DISPONÍVEIS</p>
+            <h3 id="tools-heading">Seus acessos</h3>
           </div>
           <span id="connection-status" class="connection-status">Conectando...</span>
         </div>
 
-        <div id="loading" class="card-grid" aria-label="Carregando contas">
+        <div id="loading" class="card-grid" aria-label="Carregando ferramentas">
           <article class="account-card skeleton"></article>
           <article class="account-card skeleton"></article>
           <article class="account-card skeleton"></article>
         </div>
 
-        <div id="accounts" class="card-grid" hidden></div>
+        <div id="tools" class="card-grid" hidden></div>
 
         <div id="empty" class="empty-state" hidden>
           <div aria-hidden="true">⌕</div>
-          <h3>Nenhuma conta encontrada</h3>
-          <p>Ajuste a busca ou confira a conexão com o Supabase.</p>
+          <h3>Nenhuma ferramenta encontrada</h3>
+          <p>Ajuste a busca ou atualize a lista.</p>
         </div>
       </section>
     </main>
+
+    <div id="report-backdrop" class="modal-backdrop" hidden>
+      <section
+        id="report-dialog"
+        class="report-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="report-title"
+        aria-describedby="report-description"
+      >
+        <header class="report-header">
+          <div>
+            <p class="eyebrow">AÇÃO COMPARTILHADA</p>
+            <h2 id="report-title">Reportar ferramenta deslogada</h2>
+          </div>
+          <button id="report-close" class="icon-button" type="button" aria-label="Fechar">×</button>
+        </header>
+
+        <div class="report-body">
+          <p id="report-tool-name" class="report-tool-name"></p>
+          <div class="report-warning">
+            <strong>Confirme somente se a ferramenta realmente abriu deslogada.</strong>
+            <p id="report-description">
+              O serviço iniciará um novo login e poderá desconectar temporariamente outros usuários desta ferramenta.
+            </p>
+          </div>
+
+          <label for="report-confirmation">Digite o código de 4 caracteres abaixo:</label>
+          <output id="report-code" class="report-code" aria-label="Código de confirmação"></output>
+          <input
+            id="report-confirmation"
+            class="report-confirmation"
+            type="text"
+            inputmode="text"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            maxlength="4"
+            placeholder="Código"
+          />
+          <p class="report-audit-note">Esta ação é registrada para fins de segurança.</p>
+        </div>
+
+        <footer class="report-actions">
+          <button id="report-cancel" class="secondary-button" type="button">Cancelar</button>
+          <button id="report-submit" class="danger-button" type="button" disabled>
+            Confirmar reporte
+          </button>
+        </footer>
+      </section>
+    </div>
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
     <script src="./renderer.js"></script>

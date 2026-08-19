@@ -12,7 +12,7 @@
     "start": "node scripts/start.mjs",
     "test": "node --test",
     "test:browser": "node --test test/browser.integration.mjs",
-    "check": "node --check scripts/start.mjs && node --check src/main.mjs && node --check src/config.mjs && node --check src/supabase.mjs && node --check src/browser-manager.mjs && node --check src/preload.cjs && node --check public/renderer.js"
+    "check": "node --check scripts/start.mjs && node --check src/main.mjs && node --check src/config.mjs && node --check src/supabase.mjs && node --check src/hwid.mjs && node --check src/hodpro-service.mjs && node --check src/hodpro-api.mjs && node --check src/auth-store.mjs && node --check src/browser-manager.mjs && node --check src/preload.cjs && node --check public/renderer.js"
   },
   "dependencies": {
     "dotenv": "17.4.2",
