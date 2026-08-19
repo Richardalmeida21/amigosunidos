@@ -250,13 +250,16 @@ function compareVersions(left, right) {
 }
 
 function accessState(payload, now, appVersion = "0.0.0") {
+  const profileFieldPresent = Boolean(
+    payload && typeof payload === "object" && Object.hasOwn(payload, "profile")
+  );
   const hasProfile = payload?.profile && typeof payload.profile === "object" &&
     !Array.isArray(payload.profile);
   const profile = hasProfile ? payload.profile : {};
   const config = payload?.config && typeof payload.config === "object"
     ? payload.config
     : {};
-  if (!hasProfile) {
+  if (profileFieldPresent && !hasProfile) {
     return { blocked: true, code: "PROFILE_UNAVAILABLE" };
   }
   if (config.maintenance_mode === true) {
@@ -387,6 +390,12 @@ export class HodProService {
     });
   }
 
+  async revokeCurrentAccess() {
+    await this.browserManager.close().catch(() => undefined);
+    this.openAccounts.clear();
+    this.replaceOnNextOpen.clear();
+  }
+
   async verifyCurrentDevice() {
     const status = await this.auth.getStatus();
     const userId = ensureUuid(status?.user?.id, "INVALID_USER_ID");
@@ -422,7 +431,7 @@ export class HodProService {
     const maintenance = new Set(maintenanceIds(pollPayload));
     this.currentAccessState = accessState(pollPayload, this.now(), this.appVersion);
     if (this.currentAccessState.blocked) {
-      await this.revokeCurrentAccess(this.currentAccessState.code);
+      await this.revokeCurrentAccess();
     }
     const normalized = toolArray(toolsPayload)
       .map(normalizeTool)
@@ -631,7 +640,7 @@ export class HodProService {
     const visible = new Set(visibleToolIds(payload));
     this.currentAccessState = accessState(payload, this.now(), this.appVersion);
     if (this.currentAccessState.blocked) {
-      await this.revokeCurrentAccess(this.currentAccessState.code);
+      await this.revokeCurrentAccess();
     }
     for (const [id, tool] of this.tools) {
       tool.inMaintenance = ids.includes(id);

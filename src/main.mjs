@@ -120,7 +120,13 @@ async function boot() {
       channel: config.browserChannel,
       profilesRoot: path.join(app.getPath("userData"), "tool-profiles")
     });
-    service = new HodProService({ api, auth, browserManager, deviceId });
+    service = new HodProService({
+      api,
+      auth,
+      browserManager,
+      deviceId,
+      appVersion: app.getVersion()
+    });
     await service.initialize();
     registerHandlers();
     mainWindow = createWindow();
