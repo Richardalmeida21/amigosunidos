@@ -1,0 +1,24 @@
+{
+  "name": "painel-de-contas",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Painel desktop local para abrir contas próprias em contextos isolados do navegador.",
+  "type": "module",
+  "main": "src/main.mjs",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "start": "node scripts/start.mjs",
+    "test": "node --test",
+    "test:browser": "node --test test/browser.integration.mjs",
+    "check": "node --check scripts/start.mjs && node --check src/main.mjs && node --check src/config.mjs && node --check src/supabase.mjs && node --check src/browser-manager.mjs && node --check src/preload.cjs && node --check public/renderer.js"
+  },
+  "dependencies": {
+    "dotenv": "17.4.2",
+    "playwright-core": "1.62.1"
+  },
+  "devDependencies": {
+    "electron": "43.4.1"
+  }
+}

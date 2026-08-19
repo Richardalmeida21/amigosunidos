@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Painel de Contas</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
+
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand-mark" aria-hidden="true">
+          <span></span>
+          <span></span>
+        </div>
+        <div class="brand-copy">
+          <p class="eyebrow">ACESSO LOCAL</p>
+          <h1>Painel de Contas</h1>
+        </div>
+        <div class="privacy-pill">
+          <span class="privacy-dot"></span>
+          Cookies fora da interface
+        </div>
+      </header>
+
+      <section class="hero">
+        <div>
+          <p class="hero-kicker">SUAS FERRAMENTAS, UM CLIQUE</p>
+          <h2>Entre na conta certa<br /><span>sem repetir o login.</span></h2>
+          <p class="hero-description">
+            Cada acesso abre uma janela isolada do Chrome. As sessões ficam somente
+            no processo local e são descartadas ao fechar o painel.
+          </p>
+        </div>
+        <div class="hero-stat" aria-label="Resumo das contas">
+          <span id="account-count">—</span>
+          <small>contas encontradas</small>
+        </div>
+      </section>
+
+      <aside id="security-banner" class="security-banner" hidden>
+        <div class="shield" aria-hidden="true">!</div>
+        <div>
+          <strong>Consulta anônima detectada</strong>
+          <p>
+            Adequado apenas para dados fictícios. Antes de usar sessões reais,
+            proteja a tabela com Supabase Auth e RLS.
+          </p>
+        </div>
+      </aside>
+
+      <section class="toolbar" aria-label="Controles da lista">
+        <label class="search-box">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="m21 21-4.6-4.6m2.1-5.4a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z" />
+          </svg>
+          <input
+            id="search"
+            type="search"
+            autocomplete="off"
+            placeholder="Buscar conta ou ferramenta..."
+          />
+        </label>
+        <button id="refresh" class="secondary-button" type="button">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M20 6v5h-5M4 18v-5h5M6.1 9A7 7 0 0 1 18 6.5L20 11M4 13l2 4.5A7 7 0 0 0 17.9 15" />
+          </svg>
+          Atualizar
+        </button>
+      </section>
+
+      <section>
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">CONTAS DISPONÍVEIS</p>
+            <h3>Acessos salvos</h3>
+          </div>
+          <span id="connection-status" class="connection-status">Conectando...</span>
+        </div>
+
+        <div id="loading" class="card-grid" aria-label="Carregando contas">
+          <article class="account-card skeleton"></article>
+          <article class="account-card skeleton"></article>
+          <article class="account-card skeleton"></article>
+        </div>
+
+        <div id="accounts" class="card-grid" hidden></div>
+
+        <div id="empty" class="empty-state" hidden>
+          <div aria-hidden="true">⌕</div>
+          <h3>Nenhuma conta encontrada</h3>
+          <p>Ajuste a busca ou confira a conexão com o Supabase.</p>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <script src="./renderer.js"></script>
+  </body>
+</html>
