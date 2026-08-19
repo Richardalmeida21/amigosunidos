@@ -2,12 +2,19 @@ name: Build Windows Portable
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: amigos-unidos-windows-release
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: windows-latest
     permissions:
-      contents: read
+      contents: write
 
     steps:
       - name: Checkout
@@ -52,15 +59,55 @@ jobs:
       - name: Build portable app
         run: npm run dist:win
 
+      - name: Normalize portable executable name
+        shell: pwsh
+        run: |
+          $target = Join-Path $PWD "dist\AmigosUnidos-portable.exe"
+          $source = Get-ChildItem -Path (Join-Path $PWD "dist") -Filter "*-portable.exe" |
+            Where-Object { $_.FullName -ne $target } |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+          if (-not $source) {
+            if (-not (Test-Path $target)) {
+              throw "O executável portátil não foi gerado."
+            }
+          } else {
+            Copy-Item -Force $source.FullName $target
+          }
+          if ((Get-Item $target).Length -lt 1MB) {
+            throw "O executável portátil gerado parece inválido."
+          }
+
       - name: Remove temporary credentials file
         if: always()
         shell: pwsh
         run: Remove-Item -Force .auto-login.json -ErrorAction SilentlyContinue
 
-      - name: Upload portable executable
+      - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
           name: AmigosUnidos-Windows
-          path: dist/*.exe
+          path: dist/AmigosUnidos-portable.exe
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish or update GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "windows-latest"
+          $asset = "dist/AmigosUnidos-portable.exe"
+          $title = "Amigos Unidos - Windows"
+          $notes = "Executável portátil atualizado automaticamente a partir do commit $env:GITHUB_SHA."
+
+          gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag $asset --clobber --repo $env:GITHUB_REPOSITORY
+            if ($LASTEXITCODE -ne 0) { throw "Falha ao atualizar o executável da Release." }
+            gh release edit $tag --title $title --notes $notes --latest --repo $env:GITHUB_REPOSITORY
+            if ($LASTEXITCODE -ne 0) { throw "Falha ao atualizar os metadados da Release." }
+          } else {
+            gh release create $tag $asset --target $env:GITHUB_SHA --title $title --notes $notes --latest --repo $env:GITHUB_REPOSITORY
+            if ($LASTEXITCODE -ne 0) { throw "Falha ao criar a Release do Windows." }
+          }
