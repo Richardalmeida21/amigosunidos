@@ -1,4 +1,4 @@
-name: Build Windows Fast
+name: Build Windows Setup
 
 on:
   workflow_dispatch:
@@ -56,22 +56,18 @@ jobs:
             [System.Text.UTF8Encoding]::new($false)
           )
 
-      - name: Build extracted Windows app
+      - name: Build Windows installer
         run: npm run dist:win
 
-      - name: Package fast-start ZIP
+      - name: Validate installer
         shell: pwsh
         run: |
-          $appDir = Join-Path $PWD "dist\win-unpacked"
-          $exe = Join-Path $appDir "Ferramentas Amigos do Rich.exe"
-          $zip = Join-Path $PWD "dist\FerramentasAmigosDoRich-win-x64.zip"
-          if (-not (Test-Path $exe)) {
-            throw "O executável extraído não foi gerado em $exe"
+          $installer = Join-Path $PWD "dist\FerramentasAmigosDoRich-Setup.exe"
+          if (-not (Test-Path $installer)) {
+            throw "O instalador não foi gerado em $installer"
           }
-          if (Test-Path $zip) { Remove-Item -Force $zip }
-          Compress-Archive -Path (Join-Path $appDir "*") -DestinationPath $zip -CompressionLevel Optimal
-          if ((Get-Item $zip).Length -lt 1MB) {
-            throw "O pacote ZIP gerado parece inválido."
+          if ((Get-Item $installer).Length -lt 1MB) {
+            throw "O instalador gerado parece inválido."
           }
 
       - name: Remove temporary credentials file
@@ -82,8 +78,8 @@ jobs:
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Ferramentas-Amigos-do-Rich-Windows
-          path: dist/FerramentasAmigosDoRich-win-x64.zip
+          name: Ferramentas-Amigos-do-Rich-Setup
+          path: dist/FerramentasAmigosDoRich-Setup.exe
           if-no-files-found: error
           retention-days: 30
 
@@ -93,15 +89,22 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tag = "windows-latest"
-          $asset = "dist/FerramentasAmigosDoRich-win-x64.zip"
+          $asset = "dist/FerramentasAmigosDoRich-Setup.exe"
           $title = "Ferramentas Amigos do Rich - Windows"
-          $notes = "Versão de abertura rápida atualizada automaticamente a partir do commit $env:GITHUB_SHA. O ZIP é extraído somente na primeira execução."
+          $notes = "Instalador em arquivo único. Instale uma vez; depois o aplicativo abre diretamente e com inicialização rápida. Atualizado a partir do commit $env:GITHUB_SHA."
 
           gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
           if ($LASTEXITCODE -eq 0) {
             gh release upload $tag $asset --clobber --repo $env:GITHUB_REPOSITORY
-            if ($LASTEXITCODE -ne 0) { throw "Falha ao atualizar o pacote da Release." }
-            gh release delete-asset $tag "AmigosUnidos-portable.exe" --yes --repo $env:GITHUB_REPOSITORY *> $null
+            if ($LASTEXITCODE -ne 0) { throw "Falha ao atualizar o instalador da Release." }
+
+            foreach ($oldAsset in @("FerramentasAmigosDoRich-win-x64.zip", "AmigosUnidos-portable.exe")) {
+              gh release delete-asset $tag $oldAsset --yes --repo $env:GITHUB_REPOSITORY 2>$null
+              if ($LASTEXITCODE -ne 0) {
+                Write-Host "Asset antigo não encontrado: $oldAsset"
+              }
+            }
+
             gh release edit $tag --title $title --notes $notes --latest --repo $env:GITHUB_REPOSITORY
             if ($LASTEXITCODE -ne 0) { throw "Falha ao atualizar os metadados da Release." }
           } else {
