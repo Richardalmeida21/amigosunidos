@@ -106,13 +106,22 @@ test("allowedOrigins amplia somente a lista explícita de origens seguras", () =
   );
 });
 
-test("IndexedDB só é aceito quando o bundle traz schema completo", () => {
-  assert.deepEqual(
-    __testing.normalizeCompleteIndexedDb({
-      legacyDb: { version: 1, stores: { tokens: [{ key: "a", value: "b" }] } }
-    }),
-    []
-  );
+test("IndexedDB aceita schema completo e converte o formato legado conhecido", () => {
+  const legacy = __testing.normalizeCompleteIndexedDb({
+    legacyDb: { version: 1, stores: { tokens: [{ key: "a", value: "b" }] } }
+  });
+
+  assert.deepEqual(legacy, [{
+    name: "legacyDb",
+    version: 1,
+    stores: [{
+      name: "tokens",
+      keyPath: null,
+      autoIncrement: true,
+      indexes: [],
+      records: [{ key: "a", value: "b" }]
+    }]
+  }]);
 
   const complete = __testing.normalizeCompleteIndexedDb({
     databases: [{
