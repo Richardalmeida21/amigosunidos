@@ -25,3 +25,113 @@
   min-width: 74px;
   text-align: right;
 }
+
+.hero.hero-rich {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  min-height: 230px;
+  padding: 52px 24px !important;
+  text-align: center;
+}
+
+.hero-rich-copy {
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.hero-rich-kicker {
+  margin: 0 0 14px;
+  color: #65e6ef;
+  font-size: clamp(13px, 1.5vw, 17px);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: none;
+}
+
+.hero.hero-rich h2 {
+  margin: 0 !important;
+  color: #edf5ff;
+  font-size: clamp(34px, 5vw, 64px) !important;
+  line-height: 1.02 !important;
+  letter-spacing: -0.045em;
+}
+
+.tool-tabs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 28px;
+}
+
+.tool-tab {
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid rgba(113, 161, 202, 0.22);
+  border-radius: 12px;
+  background: rgba(10, 29, 47, 0.72);
+  color: #92abc4;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.tool-tab:hover {
+  border-color: rgba(101, 230, 239, 0.5);
+  color: #dffbff;
+  transform: translateY(-1px);
+}
+
+.tool-tab.active {
+  border-color: rgba(101, 230, 239, 0.62);
+  background: rgba(32, 109, 126, 0.28);
+  color: #65e6ef;
+}
+
+.favorite-button {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  margin-left: auto;
+  padding: 0;
+  border: 1px solid rgba(113, 161, 202, 0.22);
+  border-radius: 11px;
+  background: rgba(8, 25, 42, 0.7);
+  color: #7f98b2;
+  font: inherit;
+  font-size: 24px;
+  line-height: 34px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease, color 140ms ease, background 140ms ease;
+}
+
+.favorite-button:hover {
+  transform: translateY(-1px) scale(1.03);
+  border-color: rgba(101, 230, 239, 0.48);
+  color: #dffbff;
+}
+
+.favorite-button.active {
+  border-color: rgba(101, 230, 239, 0.62);
+  background: rgba(32, 109, 126, 0.24);
+  color: #65e6ef;
+}
+
+@media (max-width: 720px) {
+  .hero.hero-rich {
+    min-height: 190px;
+    padding: 40px 14px !important;
+  }
+
+  .tool-tabs {
+    margin-bottom: 22px;
+  }
+
+  .tool-tab {
+    flex: 1;
+  }
+}
