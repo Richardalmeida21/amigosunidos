@@ -1,4 +1,4 @@
-name: Build Windows Portable
+name: Build Windows Fast
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
       - main
 
 concurrency:
-  group: amigos-unidos-windows-release
+  group: amigos-do-rich-windows-release
   cancel-in-progress: true
 
 jobs:
@@ -56,26 +56,22 @@ jobs:
             [System.Text.UTF8Encoding]::new($false)
           )
 
-      - name: Build portable app
+      - name: Build extracted Windows app
         run: npm run dist:win
 
-      - name: Normalize portable executable name
+      - name: Package fast-start ZIP
         shell: pwsh
         run: |
-          $target = Join-Path $PWD "dist\AmigosUnidos-portable.exe"
-          $source = Get-ChildItem -Path (Join-Path $PWD "dist") -Filter "*-portable.exe" |
-            Where-Object { $_.FullName -ne $target } |
-            Sort-Object LastWriteTime -Descending |
-            Select-Object -First 1
-          if (-not $source) {
-            if (-not (Test-Path $target)) {
-              throw "O executável portátil não foi gerado."
-            }
-          } else {
-            Copy-Item -Force $source.FullName $target
+          $appDir = Join-Path $PWD "dist\win-unpacked"
+          $exe = Join-Path $appDir "Ferramentas Amigos do Rich.exe"
+          $zip = Join-Path $PWD "dist\FerramentasAmigosDoRich-win-x64.zip"
+          if (-not (Test-Path $exe)) {
+            throw "O executável extraído não foi gerado em $exe"
           }
-          if ((Get-Item $target).Length -lt 1MB) {
-            throw "O executável portátil gerado parece inválido."
+          if (Test-Path $zip) { Remove-Item -Force $zip }
+          Compress-Archive -Path (Join-Path $appDir "*") -DestinationPath $zip -CompressionLevel Optimal
+          if ((Get-Item $zip).Length -lt 1MB) {
+            throw "O pacote ZIP gerado parece inválido."
           }
 
       - name: Remove temporary credentials file
@@ -86,8 +82,8 @@ jobs:
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AmigosUnidos-Windows
-          path: dist/AmigosUnidos-portable.exe
+          name: Ferramentas-Amigos-do-Rich-Windows
+          path: dist/FerramentasAmigosDoRich-win-x64.zip
           if-no-files-found: error
           retention-days: 30
 
@@ -97,14 +93,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tag = "windows-latest"
-          $asset = "dist/AmigosUnidos-portable.exe"
-          $title = "Amigos Unidos - Windows"
-          $notes = "Executável portátil atualizado automaticamente a partir do commit $env:GITHUB_SHA."
+          $asset = "dist/FerramentasAmigosDoRich-win-x64.zip"
+          $title = "Ferramentas Amigos do Rich - Windows"
+          $notes = "Versão de abertura rápida atualizada automaticamente a partir do commit $env:GITHUB_SHA. O ZIP é extraído somente na primeira execução."
 
           gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
           if ($LASTEXITCODE -eq 0) {
             gh release upload $tag $asset --clobber --repo $env:GITHUB_REPOSITORY
-            if ($LASTEXITCODE -ne 0) { throw "Falha ao atualizar o executável da Release." }
+            if ($LASTEXITCODE -ne 0) { throw "Falha ao atualizar o pacote da Release." }
+            gh release delete-asset $tag "AmigosUnidos-portable.exe" --yes --repo $env:GITHUB_REPOSITORY *> $null
             gh release edit $tag --title $title --notes $notes --latest --repo $env:GITHUB_REPOSITORY
             if ($LASTEXITCODE -ne 0) { throw "Falha ao atualizar os metadados da Release." }
           } else {
