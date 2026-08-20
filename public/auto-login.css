@@ -7,6 +7,21 @@
   display: block !important;
 }
 
+.user-area,
+#user-email,
 #logout {
   display: none !important;
+}
+
+.topbar {
+  justify-content: flex-start !important;
+}
+
+.brand-copy h1 {
+  letter-spacing: -0.025em;
+}
+
+.connection-status {
+  min-width: 74px;
+  text-align: right;
 }
