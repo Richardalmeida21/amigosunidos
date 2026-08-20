@@ -7,7 +7,7 @@
       content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Painel de Ferramentas</title>
+    <title>Ferramentas Amigos do Rich</title>
     <link rel="stylesheet" href="./styles.css" />
     <link rel="stylesheet" href="./auto-login.css" />
   </head>
@@ -20,39 +20,18 @@
         <div class="login-brand" aria-hidden="true">
           <div class="brand-mark"><span></span><span></span></div>
         </div>
-        <p class="eyebrow">ACESSO PROTEGIDO</p>
-        <h1 id="login-title">Entre no seu painel</h1>
-        <p class="login-description">
-          Use sua conta HodPro para carregar as ferramentas e solicitar uma sessão válida.
-        </p>
+        <p class="eyebrow">CONECTANDO</p>
+        <h1 id="login-title">Ferramentas Amigos do Rich</h1>
+        <p class="login-description">Preparando seus acessos automaticamente.</p>
 
         <form id="login-form" class="login-form" novalidate>
           <label for="login-email">E-mail</label>
-          <input
-            id="login-email"
-            name="email"
-            type="email"
-            inputmode="email"
-            autocomplete="username"
-            autocapitalize="none"
-            spellcheck="false"
-            required
-          />
-
+          <input id="login-email" name="email" type="email" autocomplete="username" required />
           <label for="login-password">Senha</label>
-          <input
-            id="login-password"
-            name="password"
-            type="password"
-            autocomplete="current-password"
-            required
-          />
-
+          <input id="login-password" name="password" type="password" autocomplete="current-password" required />
           <p id="login-error" class="form-error" role="alert" hidden></p>
           <button id="login-submit" class="primary-button" type="submit">Entrar</button>
         </form>
-
-        <p class="privacy-note">A autenticação é feita automaticamente pelo processo principal.</p>
       </section>
     </main>
 
@@ -63,27 +42,27 @@
           <span></span>
         </div>
         <div class="brand-copy">
-          <p class="eyebrow">ACESSO AUTENTICADO</p>
-          <h1>Painel de Ferramentas</h1>
+          <p class="eyebrow">ACESSOS COMPARTILHADOS</p>
+          <h1>Ferramentas Amigos do Rich</h1>
         </div>
-        <div class="user-area">
-          <span id="user-email" class="user-email"></span>
-          <button id="logout" class="secondary-button compact" type="button">Sair</button>
+        <div class="user-area" hidden>
+          <span id="user-email" class="user-email" hidden></span>
+          <button id="logout" class="secondary-button compact" type="button" hidden>Sair</button>
         </div>
       </header>
 
       <section class="hero">
         <div>
-          <p class="hero-kicker">SUAS FERRAMENTAS, UM CLIQUE</p>
-          <h2>Entre na ferramenta certa<br /><span>com uma sessão válida.</span></h2>
+          <p class="hero-kicker">TUDO EM UM SÓ LUGAR</p>
+          <h2>Escolha a ferramenta<br /><span>e entre com um clique.</span></h2>
           <p class="hero-description">
-            O painel solicita uma conta ao serviço, restaura a sessão em um perfil isolado
-            e acompanha automaticamente as ferramentas em manutenção.
+            Seus acessos são preparados automaticamente em perfis isolados para deixar a abertura rápida,
+            simples e organizada.
           </p>
         </div>
         <div class="hero-stat" aria-label="Resumo das ferramentas">
           <span id="tool-count">—</span>
-          <small>ferramentas encontradas</small>
+          <small>ferramentas liberadas</small>
         </div>
       </section>
 
@@ -121,7 +100,7 @@
         <div class="section-heading">
           <div>
             <p class="eyebrow">FERRAMENTAS DISPONÍVEIS</p>
-            <h3 id="tools-heading">Seus acessos</h3>
+            <h3 id="tools-heading">Acessos liberados</h3>
           </div>
           <span id="connection-status" class="connection-status">Conectando...</span>
         </div>
@@ -194,6 +173,7 @@
     </div>
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <script src="./brand-guard.js"></script>
     <script src="./renderer.js"></script>
   </body>
 </html>
