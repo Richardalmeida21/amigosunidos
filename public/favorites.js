@@ -2,6 +2,7 @@
 
 const FAVORITES_STORAGE_KEY = "amigos-do-rich:favorites:v1";
 const toolsContainer = document.querySelector("#tools");
+const loadingState = document.querySelector("#loading");
 const emptyState = document.querySelector("#empty");
 const emptyTitle = emptyState?.querySelector("h3") || null;
 const emptyDescription = emptyState?.querySelector("p") || null;
@@ -96,8 +97,9 @@ function applyFilter() {
   decorateCards();
 
   const cards = [...toolsContainer.querySelectorAll(".account-card")];
-  let visibleCount = 0;
+  if (cards.length === 0 && loadingState && !loadingState.hidden) return;
 
+  let visibleCount = 0;
   for (const card of cards) {
     const toolId = cardToolId(card);
     const visible = activeFilter !== "favorites" || favoriteIds.has(toolId);
