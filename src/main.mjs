@@ -6,29 +6,32 @@ import { AuthSessionManager, AuthStore, AuthStoreError } from "./auth-store.mjs"
 import { BrowserManager } from "./browser-manager.mjs";
 import { loadConfig } from "./config.mjs";
 import { HodProApi, HodProApiError } from "./hodpro-api.mjs";
-import { HodProService } from "./hodpro-service.mjs";
 import { getDeviceId } from "./hwid.mjs";
+import { RichToolsService } from "./rich-tools-service.mjs";
 import { SafeAppError } from "./supabase.mjs";
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const UI_PATH = path.resolve(MODULE_DIR, "../public/index.html");
+const SPLASH_PATH = path.resolve(MODULE_DIR, "../public/splash.html");
 const PRELOAD_PATH = path.resolve(MODULE_DIR, "preload.cjs");
+const UI_URL = pathToFileURL(UI_PATH).href;
+const SPLASH_URL = pathToFileURL(SPLASH_PATH).href;
 const { app, BrowserWindow, dialog, ipcMain, safeStorage } = electron;
 
 let mainWindow = null;
 let browserManager = null;
 let service = null;
+let serviceInitializationPromise = null;
 let shutdownStarted = false;
 let automaticCredentials = null;
 let automaticLoginPromise = null;
 
 function assertTrustedSender(event) {
-  const expectedUrl = pathToFileURL(UI_PATH).href;
   if (
     !mainWindow ||
     event.sender !== mainWindow.webContents ||
     event.senderFrame !== event.sender.mainFrame ||
-    event.senderFrame?.url !== expectedUrl
+    event.senderFrame?.url !== UI_URL
   ) {
     throw new SafeAppError("Origem da solicitação recusada.", "UNTRUSTED_SENDER");
   }
@@ -106,16 +109,27 @@ function isAuthenticationFailure(error) {
   ].includes(code) || [401, 403].includes(error?.status);
 }
 
+function ensureServiceInitialized() {
+  if (!serviceInitializationPromise) {
+    serviceInitializationPromise = service.initialize().catch((error) => {
+      serviceInitializationPromise = null;
+      throw error;
+    });
+  }
+  return serviceInitializationPromise;
+}
+
 async function automaticLogin() {
   if (automaticLoginPromise) return automaticLoginPromise;
   automaticLoginPromise = (async () => {
+    await ensureServiceInitialized();
     const credentials = loadAutomaticCredentials();
     const previousStatus = service.getAuthStatus();
     try {
       return await service.login(credentials.email, credentials.password);
     } catch (error) {
       // Se a autenticação nova falhou por rede e havia uma sessão válida salva,
-      // restaura o token anterior para o painel não ficar indisponível à toa.
+      // tenta restaurar o par anterior para não deixar o painel indisponível.
       if (previousStatus?.authenticated && !isAuthenticationFailure(error)) {
         try {
           await service.initialize();
@@ -157,8 +171,6 @@ function handle(channel, operation) {
 function registerHandlers() {
   handle("auth:status", () => service.getAuthStatus());
   handle("auth:reauthenticate", () => automaticLogin());
-  handle("auth:login", (input) => service.login(input?.email, input?.password));
-  handle("auth:logout", () => service.logout());
   handle("tools:list", () => withAutomaticRelogin(() => service.listTools()));
   handle("tools:open", (toolId) => withAutomaticRelogin(() => service.openTool(toolId)));
   handle("tools:restart", (toolId) => withAutomaticRelogin(() => service.restartTool(toolId)));
@@ -168,7 +180,7 @@ function registerHandlers() {
   handle("tools:poll", () => withAutomaticRelogin(() => service.pollTools()));
 }
 
-function createWindow() {
+function createWindow(initialPath = SPLASH_PATH) {
   const isTestMode = process.env.PANEL_TEST_MODE === "1";
   const window = new BrowserWindow({
     width: 1180,
@@ -178,7 +190,7 @@ function createWindow() {
     show: false,
     autoHideMenuBar: true,
     backgroundColor: "#07111f",
-    title: "Painel de Ferramentas",
+    title: "Ferramentas Amigos do Rich",
     webPreferences: {
       preload: PRELOAD_PATH,
       contextIsolation: true,
@@ -190,14 +202,20 @@ function createWindow() {
 
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   window.webContents.on("will-navigate", (event, targetUrl) => {
-    if (targetUrl !== pathToFileURL(UI_PATH).href) event.preventDefault();
+    if (targetUrl !== UI_URL && targetUrl !== SPLASH_URL) event.preventDefault();
   });
   if (!isTestMode) window.once("ready-to-show", () => window.show());
   window.on("closed", () => {
     if (mainWindow === window) mainWindow = null;
   });
-  window.loadFile(UI_PATH);
+  window.loadFile(initialPath);
   return window;
+}
+
+async function loadAuthenticatedPanel(window) {
+  await automaticLogin();
+  if (!window || window.isDestroyed()) return;
+  await window.loadFile(UI_PATH);
 }
 
 async function boot() {
@@ -219,7 +237,7 @@ async function boot() {
       channel: config.browserChannel,
       profilesRoot: path.join(app.getPath("userData"), "tool-profiles")
     });
-    service = new HodProService({
+    service = new RichToolsService({
       api,
       auth,
       browserManager,
@@ -227,10 +245,16 @@ async function boot() {
       appVersion: app.getVersion()
     });
 
-    await service.initialize();
-    await automaticLogin();
     registerHandlers();
-    mainWindow = createWindow();
+    mainWindow = createWindow(SPLASH_PATH);
+
+    loadAuthenticatedPanel(mainWindow).catch((error) => {
+      const message = error instanceof Error && typeof error.message === "string"
+        ? error.message
+        : "Não foi possível conectar ao serviço.";
+      dialog.showErrorBox("Ferramentas Amigos do Rich", message);
+      app.quit();
+    });
 
     if (process.env.PANEL_TEST_MODE === "1") {
       const autoExitMs = Number.parseInt(process.env.PANEL_AUTO_EXIT_MS || "", 10);
@@ -242,7 +266,7 @@ async function boot() {
     const message = error instanceof Error && typeof error.message === "string"
       ? error.message
       : "Não foi possível iniciar o aplicativo.";
-    dialog.showErrorBox("Painel de Ferramentas", message);
+    dialog.showErrorBox("Ferramentas Amigos do Rich", message);
     app.quit();
   }
 }
@@ -261,7 +285,16 @@ if (!lockAcquired) {
 }
 
 app.on("activate", () => {
-  if (!mainWindow && service) mainWindow = createWindow();
+  if (mainWindow || !service) return;
+  const status = service.getAuthStatus();
+  mainWindow = createWindow(status?.authenticated ? UI_PATH : SPLASH_PATH);
+  if (!status?.authenticated) {
+    loadAuthenticatedPanel(mainWindow).catch((error) => {
+      const message = error instanceof Error ? error.message : "Não foi possível conectar ao serviço.";
+      dialog.showErrorBox("Ferramentas Amigos do Rich", message);
+      app.quit();
+    });
+  }
 });
 
 app.on("window-all-closed", () => app.quit());
