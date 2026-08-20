@@ -17,12 +17,6 @@ contextBridge.exposeInMainWorld(
   Object.freeze({
     getAuthStatus: () => invoke("auth:status"),
     reauthenticate: () => invoke("auth:reauthenticate"),
-    login: ({ email, password }) =>
-      invoke("auth:login", {
-        email: String(email || "").trim(),
-        password: String(password || "")
-      }),
-    logout: () => invoke("auth:logout"),
     listTools: () => invoke("tools:list"),
     openTool: (toolId) => invoke("tools:open", String(toolId || "")),
     restartTool: (toolId) => invoke("tools:restart", String(toolId || "")),
