@@ -2,7 +2,7 @@
   "name": "painel-de-contas",
   "version": "1.0.0",
   "private": true,
-  "description": "Painel desktop local para abrir contas próprias em contextos isolados do navegador.",
+  "description": "Ferramentas Amigos do Rich em contextos isolados do navegador.",
   "type": "module",
   "main": "src/main.mjs",
   "engines": {
@@ -12,8 +12,8 @@
     "start": "node scripts/start.mjs",
     "test": "node --test",
     "test:browser": "node --test test/browser.integration.mjs",
-    "check": "node --check scripts/start.mjs && node --check src/main.mjs && node --check src/config.mjs && node --check src/supabase.mjs && node --check src/hwid.mjs && node --check src/hodpro-service.mjs && node --check src/hodpro-api.mjs && node --check src/auth-store.mjs && node --check src/browser-manager.mjs && node --check src/preload.cjs && node --check public/renderer.js",
-    "dist:win": "electron-builder --win portable --x64"
+    "check": "node --check scripts/start.mjs && node --check src/main.mjs && node --check src/config.mjs && node --check src/supabase.mjs && node --check src/hwid.mjs && node --check src/hodpro-service.mjs && node --check src/rich-tools-service.mjs && node --check src/hodpro-api.mjs && node --check src/auth-store.mjs && node --check src/browser-manager.mjs && node --check src/preload.cjs && node --check public/brand-guard.js && node --check public/renderer.js",
+    "dist:win": "electron-builder --win --x64 --dir"
   },
   "dependencies": {
     "dotenv": "17.4.2",
@@ -24,8 +24,8 @@
     "electron-builder": "26.15.7"
   },
   "build": {
-    "appId": "br.com.amigosunidos.painel",
-    "productName": "Amigos Unidos",
+    "appId": "br.com.amigosdorich.ferramentas",
+    "productName": "Ferramentas Amigos do Rich",
     "asar": true,
     "directories": {
       "output": "dist"
@@ -41,15 +41,6 @@
         "from": ".auto-login.json",
         "to": "auto-login.json"
       }
-    ],
-    "win": {
-      "target": [
-        {
-          "target": "portable",
-          "arch": ["x64"]
-        }
-      ],
-      "artifactName": "AmigosUnidos-${version}-portable.${ext}"
-    }
+    ]
   }
 }
