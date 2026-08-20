@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ferramentas Amigos do Rich</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      html, body { width: 100%; height: 100%; margin: 0; }
+      body {
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 20% 20%, rgba(67, 214, 204, .10), transparent 32%),
+          radial-gradient(circle at 82% 10%, rgba(87, 137, 255, .10), transparent 30%),
+          #07111f;
+        color: #e9f3ff;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      .splash { text-align: center; padding: 32px; }
+      .mark {
+        width: 54px;
+        height: 54px;
+        margin: 0 auto 20px;
+        border: 1px solid rgba(109, 223, 214, .45);
+        border-radius: 17px;
+        display: grid;
+        place-items: center;
+        background: rgba(17, 39, 62, .78);
+        box-shadow: 0 18px 60px rgba(0, 0, 0, .24);
+      }
+      .mark::before {
+        content: "R";
+        font-weight: 800;
+        font-size: 22px;
+        color: #52e1d4;
+      }
+      h1 { margin: 0; font-size: 25px; letter-spacing: -.03em; }
+      p { margin: 10px 0 0; color: #82a9cb; font-size: 13px; }
+      .loader {
+        width: 180px;
+        height: 3px;
+        margin: 26px auto 0;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, .08);
+      }
+      .loader::after {
+        content: "";
+        display: block;
+        width: 42%;
+        height: 100%;
+        border-radius: inherit;
+        background: #52e1d4;
+        animation: loading 1s ease-in-out infinite alternate;
+      }
+      @keyframes loading {
+        from { transform: translateX(-10%); }
+        to { transform: translateX(150%); }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="splash" aria-live="polite">
+      <div class="mark" aria-hidden="true"></div>
+      <h1>Ferramentas Amigos do Rich</h1>
+      <p>Conectando e preparando seus acessos...</p>
+      <div class="loader" aria-hidden="true"></div>
+    </main>
+  </body>
+</html>
