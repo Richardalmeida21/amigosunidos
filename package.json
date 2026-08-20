@@ -12,8 +12,8 @@
     "start": "node scripts/start.mjs",
     "test": "node --test",
     "test:browser": "node --test test/browser.integration.mjs",
-    "check": "node --check scripts/start.mjs && node --check src/main.mjs && node --check src/config.mjs && node --check src/supabase.mjs && node --check src/hwid.mjs && node --check src/hodpro-service.mjs && node --check src/rich-tools-service.mjs && node --check src/hodpro-api.mjs && node --check src/auth-store.mjs && node --check src/browser-manager.mjs && node --check src/preload.cjs && node --check public/brand-guard.js && node --check public/renderer.js",
-    "dist:win": "electron-builder --win --x64 --dir"
+    "check": "node --check scripts/start.mjs && node --check src/main.mjs && node --check src/config.mjs && node --check src/supabase.mjs && node --check src/hwid.mjs && node --check src/hodpro-service.mjs && node --check src/rich-tools-service.mjs && node --check src/hodpro-api.mjs && node --check src/auth-store.mjs && node --check src/browser-manager.mjs && node --check src/preload.cjs && node --check public/brand-guard.js && node --check public/favorites.js && node --check public/renderer.js",
+    "dist:win": "electron-builder --win nsis --x64"
   },
   "dependencies": {
     "dotenv": "17.4.2",
@@ -41,6 +41,23 @@
         "from": ".auto-login.json",
         "to": "auto-login.json"
       }
-    ]
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "artifactName": "FerramentasAmigosDoRich-Setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false
+    }
   }
 }
