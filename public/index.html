@@ -51,19 +51,12 @@
         </div>
       </header>
 
-      <section class="hero">
-        <div>
-          <p class="hero-kicker">TUDO EM UM SÓ LUGAR</p>
-          <h2>Escolha a ferramenta<br /><span>e entre com um clique.</span></h2>
-          <p class="hero-description">
-            Seus acessos são preparados automaticamente em perfis isolados para deixar a abertura rápida,
-            simples e organizada.
-          </p>
+      <section class="hero hero-rich">
+        <div class="hero-rich-copy">
+          <p class="hero-rich-kicker">ta tudo liberado amiguinho</p>
+          <h2>OOOH RIXIIII, É O RIIIXII</h2>
         </div>
-        <div class="hero-stat" aria-label="Resumo das ferramentas">
-          <span id="tool-count">—</span>
-          <small>ferramentas liberadas</small>
-        </div>
+        <span id="tool-count" hidden aria-hidden="true">0</span>
       </section>
 
       <aside id="maintenance-banner" class="security-banner" hidden>
@@ -95,6 +88,15 @@
           Atualizar
         </button>
       </section>
+
+      <nav class="tool-tabs" aria-label="Filtro de ferramentas">
+        <button id="tab-all" class="tool-tab active" type="button" data-tool-filter="all" aria-pressed="true">
+          Todas
+        </button>
+        <button id="tab-favorites" class="tool-tab" type="button" data-tool-filter="favorites" aria-pressed="false">
+          ★ Favoritos
+        </button>
+      </nav>
 
       <section aria-labelledby="tools-heading">
         <div class="section-heading">
@@ -174,6 +176,7 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
     <script src="./brand-guard.js"></script>
+    <script src="./favorites.js"></script>
     <script src="./renderer.js"></script>
   </body>
 </html>
