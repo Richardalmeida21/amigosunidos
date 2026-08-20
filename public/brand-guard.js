@@ -15,7 +15,7 @@ function hideAccountIdentity() {
   const logout = document.querySelector("#logout");
   if (userArea) userArea.hidden = true;
   if (userEmail) {
-    userEmail.textContent = "";
+    if (userEmail.textContent) userEmail.textContent = "";
     userEmail.hidden = true;
   }
   if (logout) logout.hidden = true;
@@ -35,7 +35,9 @@ if (connectionStatus) {
 
 const userEmail = document.querySelector("#user-email");
 if (userEmail) {
-  new MutationObserver(hideAccountIdentity).observe(userEmail, {
+  new MutationObserver(() => {
+    if (userEmail.textContent) hideAccountIdentity();
+  }).observe(userEmail, {
     childList: true,
     characterData: true,
     subtree: true
